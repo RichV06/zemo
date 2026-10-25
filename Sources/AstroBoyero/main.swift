@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 import Carbon.HIToolbox
+import AstroCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -87,11 +88,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func petMenu() -> NSMenu {
         let menu = NSMenu()
-        for (title, action) in [("Hablar con Zemo", #selector(showChat)), ("Mostrar u ocultar mascota", #selector(togglePet)), ("Salir", #selector(quit))] {
+        for (title, action) in [("Hablar con Zemo", #selector(showChat)), ("Mostrar u ocultar mascota", #selector(togglePet))] {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
             item.target = self
             menu.addItem(item)
         }
+        let languages = NSMenu()
+        for language in DictationLanguage.allCases {
+            let item = NSMenuItem(title: language.displayName, action: #selector(chooseDictationLanguage(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = language.rawValue
+            languages.addItem(item)
+        }
+        let languageItem = NSMenuItem(title: "Idioma de dictado", action: nil, keyEquivalent: "")
+        languageItem.submenu = languages
+        menu.addItem(languageItem)
+        let quitItem = NSMenuItem(title: "Salir", action: #selector(quit), keyEquivalent: "")
+        quitItem.target = self
+        menu.addItem(quitItem)
         return menu
     }
 
@@ -106,6 +120,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if petWindow.isVisible { petWindow.orderOut(nil) } else { petWindow.orderFrontRegardless() }
     }
     @objc func quit() { NSApp.terminate(nil) }
+    @objc func chooseDictationLanguage(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? String, let language = DictationLanguage(rawValue: raw) { model.setDictationLanguage(language) }
+    }
+    @objc func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(chooseDictationLanguage(_:)) {
+            item.state = (item.representedObject as? String) == model.dictationLanguage.rawValue ? .on : .off
+            return !model.isDictating
+        }
+        return true
+    }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if model.isRunning {
             let alert = NSAlert()

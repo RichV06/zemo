@@ -72,6 +72,16 @@ final class ChatModel: ObservableObject {
         }
     }
 
+    @Published private(set) var dictationLanguage: DictationLanguage =
+        UserDefaults.standard.string(forKey: "ZemoDictationLanguage").flatMap(DictationLanguage.init(rawValue:)) ?? .spanish
+
+    func setDictationLanguage(_ value: DictationLanguage) {
+        guard !isDictating, value != dictationLanguage else { return }
+        dictationLanguage = value
+        UserDefaults.standard.set(value.rawValue, forKey: "ZemoDictationLanguage")
+        status = "Dictado: \(value.displayName)"
+    }
+
     private func startDictation() {
         switch policy.start(draft: draft, taskRunning: isRunning) {
         case .blockedByTask:
@@ -84,7 +94,7 @@ final class ChatModel: ObservableObject {
             dictationPhase = .listening
             status = "Preparando el micrófono…"
             Task { @MainActor in
-                let problem = await capture.start()
+                let problem = await capture.start(language: dictationLanguage)
                 guard policy.phase == .listening, dictationID == id else { capture.cancel(); return }
                 if let problem { dictationFailed(problem); return }
                 captureReady = true

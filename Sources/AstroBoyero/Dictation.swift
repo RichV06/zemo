@@ -21,14 +21,20 @@ final class SpeechCapture {
     private var stopping = false
 
     /// Pide permisos solo la primera vez e inicia la captura. Devuelve un mensaje en español si no pudo.
-    func start() async -> String? {
+    func start(language: DictationLanguage) async -> String? {
         if let problem = await Self.requestPermissions() { return problem }
-        let locales = ["es-MX", "es-ES", "es-US"].map(Locale.init(identifier:))
-        guard let recognizer = locales.lazy.compactMap({ SFSpeechRecognizer(locale: $0) }).first(where: { $0.isAvailable }) else {
-            return "El reconocimiento de voz en español no está disponible ahora. Puedes seguir escribiendo."
+        let candidates = DictationPolicy.locales(for: language, preferred: Locale.preferredLanguages)
+        let usable = candidates.compactMap { id -> (String, SFSpeechRecognizer)? in
+            guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: id)), recognizer.isAvailable else { return nil }
+            return (id, recognizer)
         }
-        guard recognizer.supportsOnDeviceRecognition else {
-            return "Este Mac no tiene reconocimiento de voz local en español, y Zemo no envía audio a otros servicios. Actívalo en Ajustes del Sistema > Teclado > Dictado, o escribe tu instrucción."
+        guard !usable.isEmpty else {
+            return "El reconocimiento de voz en \(language.displayName) no está disponible ahora. Puedes seguir escribiendo."
+        }
+        let local = Dictionary(uniqueKeysWithValues: usable)
+        guard let chosen = DictationPolicy.firstOnDevice(in: usable.map(\.0), supports: { local[$0]?.supportsOnDeviceRecognition == true }),
+              let recognizer = local[chosen] else {
+            return "Este Mac no tiene reconocimiento de voz local en \(language.displayName), y Zemo no envía audio a otros servicios. Abre Ajustes del Sistema > Teclado > Dictado, actívalo y añade el idioma en Idiomas (se descarga el modelo local), o cambia el idioma de dictado en el menú de Zemo. Mientras tanto, escribe tu instrucción."
         }
         teardown()
         generation += 1

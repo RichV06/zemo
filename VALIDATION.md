@@ -40,3 +40,17 @@
 El envío real de una instrucción desde la interfaz no está verificado. Computer Use rechazó el acceso a la app durante la revisión visual. La prueba directa del CLI desde el entorno administrado tampoco pudo iniciar su cliente interno (`Operation not permitted`); esto ocurrió antes de una respuesta del modelo. No se han desactivado permisos para sortear esos límites.
 
 Para comprobarlo en la sesión normal del Mac, cierra Astro Boyero si sigue abierto, abre Zemo y envía: «Ejecuta pwd y dime en qué carpeta estamos. No modifiques archivos». Debe aparecer el directorio seleccionado y, en la vista de actividad, el comando y su salida. Si falla, el mensaje de error incluye los diagnósticos del CLI.
+
+## Dictado: selección de variante local — 25 de octubre de 2026
+
+- Síntoma: «Este Mac no tiene reconocimiento de voz local en español». Sonda con `SFSpeechRecognizer`: ninguna variante de español (es-CR, es-MX, es-ES, es-US, es-419, es-AR, es-CO, es-CL) tiene modelo local en este Mac; solo inglés. El aviso era correcto y la causa es que el Dictado del sistema solo tiene `en_GB`.
+- Fallo real de código corregido: se tomaba la primera variante *disponible* (es-MX) y solo después se comprobaba si era local, sin probar las demás. Ahora se evalúan primero los idiomas del sistema y luego es-CR, es-MX, es-419, es-ES, es-US, es-AR, es-CO, es-CL, y se usa la primera con modelo local. Nunca se cae a reconocimiento en servidor.
+- Pruebas escritas primero (no compilaban sin `spanishLocales`/`firstOnDevice`); `AstroCoreChecks`: PASS. `build-app.sh`: compila.
+- Mensaje de error ahora indica añadir Español en Dictado > Idiomas.
+- **Sin verificar:** dictado real con el modelo descargado (requiere que se active en Ajustes).
+
+## Idioma de dictado (es/en) — 25 de octubre de 2026
+
+- Este Mac tiene modelo local de inglés (`en-US`) pero no de español. Se añadió `DictationLanguage` (español por defecto) y el submenú «Idioma de dictado» en el menú de la huella; la elección se guarda en `ZemoDictationLanguage` y no cambia durante un dictado. Sigue sin haber reconocimiento en servidor.
+- Pruebas escritas primero (no compilaban sin `locales(for:preferred:)`/`DictationLanguage`); `AstroCoreChecks`: PASS; `build-app.sh`: compila.
+- **Sin verificar:** dictado real en inglés con audio y el submenú con clics.

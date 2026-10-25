@@ -1,5 +1,17 @@
 import Foundation
 
+/// Idioma del dictado; se guarda por su valor y el predeterminado es español.
+public enum DictationLanguage: String, CaseIterable {
+    case spanish = "es", english = "en"
+    public var displayName: String { self == .spanish ? "Español" : "English" }
+    var commonLocales: [String] {
+        switch self {
+        case .spanish: return ["es-CR", "es-MX", "es-419", "es-ES", "es-US", "es-AR", "es-CO", "es-CL"]
+        case .english: return ["en-US", "en-GB", "en-CA", "en-AU"]
+        }
+    }
+}
+
 public enum DictationPhase: Equatable { case idle, listening, finishing }
 public enum DictationStart: Equatable { case started(Int), blockedByTask, alreadyActive }
 public enum DictationOutcome: Equatable { case draft(String), noSpeech(restore: String), ignored }
@@ -14,6 +26,21 @@ public struct DictationPolicy {
     public init() {}
 
     public var isBusy: Bool { phase != .idle }
+
+    /// Variantes del idioma a probar: primero las del sistema, luego las comunes, sin repetir.
+    public static func locales(for language: DictationLanguage, preferred: [String]) -> [String] {
+        let prefix = language.rawValue + "-"
+        let system = preferred.map { $0.replacingOccurrences(of: "_", with: "-") }.filter { $0.hasPrefix(prefix) }
+        var seen = Set<String>()
+        return (system + language.commonLocales).filter { seen.insert($0).inserted }
+    }
+
+    public static func spanishLocales(preferred: [String]) -> [String] { locales(for: .spanish, preferred: preferred) }
+
+    /// Primera variante con reconocimiento local; nunca cae a un reconocedor en servidor.
+    public static func firstOnDevice(in locales: [String], supports: (String) -> Bool) -> String? {
+        locales.first(where: supports)
+    }
 
     public mutating func start(draft: String, taskRunning: Bool) -> DictationStart {
         guard !taskRunning else { return .blockedByTask }

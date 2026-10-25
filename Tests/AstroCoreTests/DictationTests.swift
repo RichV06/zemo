@@ -87,4 +87,36 @@ final class DictationTests {
         _ = policy.finish("x", session: id)
         XCTAssertFalse(policy.isBusy)
     }
+
+    func testSpanishCandidatesPutSystemLanguagesFirstWithoutDuplicates() {
+        let list = DictationPolicy.spanishLocales(preferred: ["en-CR", "es_CR", "es-MX"])
+        XCTAssertEqual(Array(list.prefix(2)), ["es-CR", "es-MX"])
+        XCTAssertEqual(list.count, Set(list).count)
+        XCTAssertTrue(list.allSatisfy { $0.hasPrefix("es-") })
+        XCTAssertTrue(list.contains("es-419") && list.contains("es-ES") && list.contains("es-US"))
+    }
+
+    func testPicksFirstSpanishLocaleThatWorksOnDevice() {
+        let list = ["es-CR", "es-MX", "es-ES"]
+        XCTAssertEqual(DictationPolicy.firstOnDevice(in: list) { $0 == "es-ES" }, "es-ES")
+        XCTAssertEqual(DictationPolicy.firstOnDevice(in: list) { _ in true }, "es-CR")
+        XCTAssertEqual(DictationPolicy.firstOnDevice(in: list) { _ in false }, nil)
+    }
+
+    func testEnglishCandidatesUseOnlyEnglishVariantsAndSystemOnesFirst() {
+        let list = DictationPolicy.locales(for: .english, preferred: ["en-CR", "en_GB", "es-CR"])
+        XCTAssertEqual(Array(list.prefix(2)), ["en-CR", "en-GB"])
+        XCTAssertEqual(list.count, Set(list).count)
+        XCTAssertTrue(list.allSatisfy { $0.hasPrefix("en-") })
+        XCTAssertTrue(list.contains("en-US"))
+        XCTAssertEqual(DictationPolicy.locales(for: .spanish, preferred: ["es_CR"]).first, "es-CR")
+    }
+
+    func testDictationLanguageIsSavedByRawValueWithSpanishDefault() {
+        XCTAssertEqual(DictationLanguage(rawValue: "en"), .english)
+        XCTAssertEqual(DictationLanguage(rawValue: "es"), .spanish)
+        XCTAssertNil(DictationLanguage(rawValue: "fr"))
+        XCTAssertEqual(DictationLanguage.spanish.displayName, "Español")
+        XCTAssertEqual(DictationLanguage.english.displayName, "English")
+    }
 }
