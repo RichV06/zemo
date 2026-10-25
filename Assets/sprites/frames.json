@@ -1,0 +1,37 @@
+{
+  "frameSize": 64,
+  "states": {
+    "reposo": {
+      "row": 0,
+      "frames": 2
+    },
+    "escucha": {
+      "row": 1,
+      "frames": 2
+    },
+    "pensando": {
+      "row": 2,
+      "frames": 3
+    },
+    "hablando": {
+      "row": 3,
+      "frames": 3
+    },
+    "llamada": {
+      "row": 4,
+      "frames": 2
+    },
+    "alerta": {
+      "row": 5,
+      "frames": 2
+    },
+    "celebra": {
+      "row": 6,
+      "frames": 2
+    },
+    "empuja": {
+      "row": 7,
+      "frames": 2
+    }
+  }
+}
